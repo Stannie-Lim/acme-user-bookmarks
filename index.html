@@ -182,25 +182,22 @@
 					const { user, bookmarks } = this.state;
 					const myUser = await fetchUser();
 					const myBookmarks = await axios.get(`${API}/users/${myUser.id}/bookmarks`);
-
 					this.setState({user: myUser, bookmarks: myBookmarks.data});
 				}
 
 				async create(bookmark) {
-					const user = await fetchUser();
 					const randomNumber = Math.floor(Math.random() * 5);
-					const newPost = await axios.post(`${API}/users/${user.id}/bookmarks`, {
+					const newPost = (await axios.post(`${API}/users/${this.state.user.id}/bookmarks`, {
 						category: bookmark.category,
 						url: bookmark.url,
 						rating: randomNumber
-					})
-					const newBookmark = [...this.state.notes, newPost];
-          			this.setState({ newBookmark }); 
+					})).data;
+					const newBookmark = [...this.state.bookmarks, newPost];
+          			this.setState({ bookmarks: newBookmark });
 				}
 
 				async destroy(bookmark) {
-					const user = await fetchUser();
-					await axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`);
+					await axios.delete(`${API}/users/${this.state.user.id}/bookmarks/${bookmark.id}`);
 					this.setState({bookmarks: this.state.bookmarks.filter( delThis => delThis.id !== bookmark.id)});
 				}
 
