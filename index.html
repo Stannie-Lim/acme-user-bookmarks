@@ -1,19 +1,263 @@
-<html>
-  <head>
-<style>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.js'></script>
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.1/react-router-dom.js"></script>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
 
-</style>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js'></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.0/react-router-dom.js'></script>
-  </head>
-  <body>
-    <div id='root'></div>
-    <script type='text/babel'>
-      const root = document.querySelector('#root');
-      ReactDOM.render(<hr />, root);
-    </script>
-  </body>
+        <style>
+            body {
+				font-family: sans-serif;
+			}
+			nav {
+				display: flex;
+				justify-content: space-around;
+			}
+			.selected, nav > a:hover {
+				background-color: teal;
+				color: white;
+				padding: 1rem;
+				transition: 0.5s linear;
+				border-radius: 5px;
+			}
+			nav > a {
+				display: flex;
+				align-items: center;
+				padding: 1rem;
+			}
+			ul {
+				list-style-type: none;
+			}
+			li {
+				padding: 1rem;
+				display: flex;
+			}
+			button.delete {
+				width: 20%;
+			}
+			input, button.submit {
+				display: flex;
+				width: 96%;
+				margin: 1rem;
+				justify-content: center;
+			}
+			form {
+				width: 100%;
+				border: 1px solid black;
+			}
+			div.form {
+				display: flex;
+				justify-content: center;
+				padding: 1rem;
+			}
+        </style>
+
+
+    </head>
+    <body>
+        <div id="root">
+            
+        </div>
+
+        <script type="text/babel">
+
+			const API = 'https://acme-users-api-rev.herokuapp.com/api';
+			const fetchUser = async ()=> {
+			const storage = window.localStorage;
+			const userId = storage.getItem('userId'); 
+			if(userId){
+				try {
+				return (await axios.get(`${API}/users/detail/${userId}`)).data;
+				}
+				catch(ex){
+				storage.removeItem('userId');
+				return fetchUser();
+				}
+			}
+				const user = (await axios.get(`${API}/users/random`)).data;
+				storage.setItem('userId', user.id);
+				return user;
+			};
+
+            const {Component} = React;
+            const {HashRouter, Link, Route, Switch} = ReactRouterDOM;
+            const {render} = ReactDOM;
+
+			const Bookmarks = ({ bookmarks, destroy, match }) => {
+				const filter = match.params.filter;
+				const filtered = bookmarks.filter(bookmark => {
+					if(filter === bookmark.category) {
+						return bookmark;
+					}
+				});
+				return (
+					filtered.map( bookmark => {
+						return (
+							<li key={bookmark.id}>
+								<a href={bookmark.url}>{bookmark.url}</a>
+								<button className="delete" onClick={() => destroy(bookmark)}>Delete</button>
+							</li>
+						)
+					})
+				)
+			};
+
+			const Nav = ({ match, bookmarks }) => {
+				const filter = match.params.filter;
+				// const filtered = bookmarks.filter(bookmark => {
+				// 	console.log(bookmark.category);
+				// 	return bookmark.category;
+				// });
+				// console.log(filtered);
+					// console.log(bookmarks[0].category);
+				const categories = [];
+				bookmarks.filter(bookmark => {
+					if(!categories.includes(bookmark.category)) {
+						categories.push(bookmark.category);
+					}
+				});
+
+				// const eachCategory = bookmarks.filter(bookmark => bookmark.category === match.params.filter);
+				return (
+				<nav>
+					{categories.map((category, index) => {
+							return (
+								<Link
+								key={index}
+								to={category}
+								className={filter === category ? "selected" : ""}
+								>
+								{category.toUpperCase()}
+								</Link>
+							)
+						})
+					}
+				</nav>
+				)
+				return null;
+			}
+
+			class Form extends Component {
+                constructor() {
+                    super();
+                    this.state = {
+                        url: '',
+						category: ''
+                    };
+                }
+                render() {
+                    const {url, category} = this.state;
+                    const onSubmit = () => {
+                        this.props.create({url, category});
+                    };
+                    return (
+						<div className="form">
+							<form onSubmit={onSubmit}>
+								<input type="text" placeholder="URL" url={url} onChange={(ev) => this.setState({url: ev.target.value})}/>
+								<input type="text" placeholder="Category" category={category} onChange={(ev) => this.setState({category: ev.target.value})}/>
+								<button className="submit" disabled={url === '' || category === ''}>Create</button>
+							</form>
+						</div>
+                    )
+                }
+            };
+
+            
+            class App extends Component {
+                constructor() {
+                    super();
+                    this.state = {
+						user: {},
+						bookmarks: []
+                    };
+					this.create = this.create.bind(this)
+					this.destroy = this.destroy.bind(this)
+                }
+
+				async componentDidMount() {
+					const { user, bookmarks } = this.state;
+					const myUser = await fetchUser();
+					const myBookmarks = await axios.get(`${API}/users/${myUser.id}/bookmarks`);
+
+					this.setState({user: myUser, bookmarks: myBookmarks.data});
+				}
+
+				async create(bookmark) {
+					const user = await fetchUser();
+					const randomNumber = Math.floor(Math.random() * 5);
+					const newPost = await axios.post(`${API}/users/${user.id}/bookmarks`, {
+						category: bookmark.category,
+						url: bookmark.url,
+						rating: randomNumber
+					})
+					const newBookmark = [...this.state.notes, newPost];
+          			this.setState({ newBookmark }); 
+				}
+
+				async destroy(bookmark) {
+					const user = await fetchUser();
+					await axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`);
+					this.setState({bookmarks: this.state.bookmarks.filter( delThis => delThis.id !== bookmark.id)});
+				}
+
+                render() {
+                    const { user, bookmarks } = this.state;
+					const { create, destroy } = this;
+					// const newStuff = async() => {
+					// 	if(user.id) {
+					// 		const newns = await axios.post(`${API}/users/${user.id}/bookmarks`, {
+					// 			category: "social",
+					// 			url: "https://www.tumblr.com/",
+					// 			rating: 0
+					// 		})
+					// 	}
+					// };
+					// newStuff();
+					// console.log(bookmarks.data);
+					// const deleteBM = async() => {
+					// 	if(user.id) {
+					// 		bookmarks.forEach(bookmark => {
+					// 			axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`)
+					// 		})
+					// 	}
+					// };
+					// deleteBM();
+
+                    return (
+						<HashRouter>
+							<h1>{user.fullName} ({bookmarks.length} bookmarks)</h1>
+							<Route path="/:filter?" render={(props) => (
+								<Nav {...props} bookmarks={bookmarks}/>
+								)}
+							/>
+							<Form create={create}/>
+							<Switch>
+								<Route exact path="/:filter"
+									render={(props) => (
+										<ul>
+											<Bookmarks
+												bookmarks={bookmarks}
+												destroy={destroy}
+												{...props}
+											/>
+										</ul>
+									)}
+								/>
+							</Switch>
+							
+							
+						</HashRouter>
+					)
+                }
+            };
+
+            const root = document.querySelector("#root");
+            ReactDOM.render(React.createElement(App), root);
+            
+        </script>
+    </body>
 </html>
