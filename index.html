@@ -260,17 +260,21 @@
 				//calls POST on the API
 				//yes i did the history.push thing just to be a little extra ;)
 				async create(bookmark, history) {
-					const randomNumber = Math.floor(Math.random() * 5);
-					const newPost = (await axios.post(`${API}/users/${this.state.user.id}/bookmarks`, {
-						category: bookmark.category,
-						url: bookmark.url,
-						rating: randomNumber
-					})).data;
-					const newBookmark = [...this.state.bookmarks, newPost];
-          			this.setState({ bookmarks: newBookmark });
-					history.push(`/${newPost.category}`);
-					if(this.state.bookmarks.length === 10) {
-						setTimeout( () => alert("You have reached the max number of bookmarks!"), 100);
+					try {
+						const randomNumber = Math.floor(Math.random() * 5);
+						const newPost = (await axios.post(`${API}/users/${this.state.user.id}/bookmarks`, {
+							category: bookmark.category,
+							url: bookmark.url,
+							rating: randomNumber
+						})).data;
+						const newBookmark = [...this.state.bookmarks, newPost];
+						this.setState({ bookmarks: newBookmark });
+						history.push(`/${newPost.category}`);
+						if(this.state.bookmarks.length === 10) {
+							setTimeout( () => alert("You have reached the max number of bookmarks!"), 100);
+						}
+					} catch(err) {
+						alert("Not a valid URL!");
 					}
 				}
 
