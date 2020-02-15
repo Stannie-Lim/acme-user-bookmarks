@@ -7,11 +7,16 @@
         <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.1/react-router-dom.js"></script>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+		<link href="https://fonts.googleapis.com/css?family=Sriracha&display=swap" rel="stylesheet">
         <style>
             body {
-				font-family: sans-serif;
+				font-family: 'Sriracha', cursive;
+				background-image: linear-gradient(red, yellow);
+				background-size: 100%;
+				background-repeat: no-repeat;
+				height: 100vh;
+				width: 100vw;
 			}
 			nav {
 				display: flex;
@@ -23,6 +28,9 @@
 				padding: 1rem;
 				transition: 0.5s linear;
 				border-radius: 5px;
+			}
+			nav > a:hover {
+				text-decoration: none;
 			}
 			nav > a {
 				display: flex;
@@ -36,24 +44,78 @@
 				padding: 1rem;
 				display: flex;
 			}
-			button.delete {
-				width: 20%;
+			a {
+				font-size: 2rem;
+				padding-right: 1rem;
 			}
-			input, button.submit {
+			input {
+				margin-bottom: 1rem;
+			}
+			button.submit {
 				display: flex;
-				width: 96%;
-				margin: 1rem;
 				justify-content: center;
+				width: 100%;
 			}
 			form {
-				width: 100%;
-				border: 1px solid black;
+				padding: 2rem;
+				width: 80%;
+				display: flex;
+				justify-content: center;
+				flex-wrap: wrap;
 			}
 			div.form {
 				display: flex;
 				justify-content: center;
+			}
+			h1 {
+				display: flex;
+				justify-content: center;
 				padding: 1rem;
 			}
+			.list {
+				display: flex;
+				justify-content: center;
+			}
+			/* taken from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_buttons_animate1 because i like to be extra*/
+			button {
+				border-radius: 4px;
+				background-color: #f4511e;
+				border: none;
+				color: #FFFFFF;
+				text-align: center;
+				font-size: 28px;
+				padding: 20px;
+				width: 200px;
+				transition: all 0.5s;
+				cursor: pointer;
+				margin: 5px;
+			}
+
+			button span {
+				cursor: pointer;
+				display: inline-block;
+				position: relative;
+				transition: 0.5s;
+			}
+
+			button span:after {
+				content: '\00bb';
+				position: absolute;
+				opacity: 0;
+				top: 0;
+				right: -20px;
+				transition: 0.5s;
+			}
+
+			button:hover span {
+				padding-right: 25px;
+			}
+
+			button:hover span:after {
+				opacity: 1;
+				right: 0;
+			}
+			/* taken from https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_buttons_animate1 */
         </style>
 
 
@@ -65,29 +127,32 @@
 
         <script type="text/babel">
 
+			const {Component} = React;
+            const {HashRouter, Link, Route, Switch} = ReactRouterDOM;
+            const {render} = ReactDOM;
 			const API = 'https://acme-users-api-rev.herokuapp.com/api';
 			const fetchUser = async ()=> {
-			const storage = window.localStorage;
-			const userId = storage.getItem('userId'); 
-			if(userId){
-				try {
-				return (await axios.get(`${API}/users/detail/${userId}`)).data;
+				const storage = window.localStorage;
+				const userId = storage.getItem('userId'); 
+				if(userId){
+					try {
+					return (await axios.get(`${API}/users/detail/${userId}`)).data;
+					}
+					catch(ex){
+					storage.removeItem('userId');
+					return fetchUser();
+					}
 				}
-				catch(ex){
-				storage.removeItem('userId');
-				return fetchUser();
-				}
-			}
 				const user = (await axios.get(`${API}/users/random`)).data;
 				storage.setItem('userId', user.id);
 				return user;
 			};
 
-            const {Component} = React;
-            const {HashRouter, Link, Route, Switch} = ReactRouterDOM;
-            const {render} = ReactDOM;
-
-			const Bookmarks = ({ bookmarks, destroy, match }) => {
+			//########################### 
+			//the list of all the bookmarks as anchor tags
+			// and a single delete button that calls the App component function "destroy"
+			//and then calls a DELETE api call with the ID
+			const Bookmarks = ({ bookmarks, destroy, match, history }) => {
 				const filter = match.params.filter;
 				const filtered = bookmarks.filter(bookmark => {
 					if(filter === bookmark.category) {
@@ -97,31 +162,29 @@
 				return (
 					filtered.map( bookmark => {
 						return (
-							<li key={bookmark.id}>
+							<li className="list" key={bookmark.id}>
 								<a href={bookmark.url}>{bookmark.url}</a>
-								<button className="delete" onClick={() => destroy(bookmark)}>Delete</button>
+								<button className="delete btn btn-primary" onClick={() => destroy(bookmark.id, history)}><span>Delete</span></button>
 							</li>
 						)
 					})
 				)
 			};
 
+			//###################################### navbar component
+			//takes in: the URL (and filter in this function), all the bookmarks in an array
 			const Nav = ({ match, bookmarks }) => {
 				const filter = match.params.filter;
-				// const filtered = bookmarks.filter(bookmark => {
-				// 	console.log(bookmark.category);
-				// 	return bookmark.category;
-				// });
-				// console.log(filtered);
-					// console.log(bookmarks[0].category);
 				const categories = [];
+
+				//puts all the categories of the bookmarks into array @categories WITHOUT DUPLICATES
 				bookmarks.filter(bookmark => {
 					if(!categories.includes(bookmark.category)) {
 						categories.push(bookmark.category);
 					}
 				});
 
-				// const eachCategory = bookmarks.filter(bookmark => bookmark.category === match.params.filter);
+				//{bookmarks.filter(bookmark => bookmark.category === category).length} counts the amount of each category
 				return (
 				<nav>
 					{categories.map((category, index) => {
@@ -131,7 +194,7 @@
 								to={category}
 								className={filter === category ? "selected" : ""}
 								>
-								{category.toUpperCase()}
+								{category} ({bookmarks.filter(bookmark => bookmark.category === category).length})
 								</Link>
 							)
 						})
@@ -141,6 +204,9 @@
 				return null;
 			}
 
+			//######################################## form component
+			//holds the form's url and category inputs and sends to CREATE (in App) when submitted
+			//yes i made it so that the if you have category "Social" and "SOCIAL", they end up in same category
 			class Form extends Component {
                 constructor() {
                     super();
@@ -152,21 +218,22 @@
                 render() {
                     const {url, category} = this.state;
                     const onSubmit = () => {
-                        this.props.create({url, category});
+                        this.props.create({url, category}, this.props.history);
                     };
                     return (
 						<div className="form">
 							<form onSubmit={onSubmit}>
-								<input type="text" placeholder="URL" url={url} onChange={(ev) => this.setState({url: ev.target.value})}/>
-								<input type="text" placeholder="Category" category={category} onChange={(ev) => this.setState({category: ev.target.value})}/>
-								<button className="submit" disabled={url === '' || category === ''}>Create</button>
+								<input className="form-control" type="text" placeholder="URL" url={url} onChange={(ev) => this.setState({url: ev.target.value})}/>
+								<input className="form-control" type="text" placeholder="Category" category={category} onChange={(ev) => this.setState({category: ev.target.value.toUpperCase()})}/>
+								<button className="submit btn btn-primary" disabled={url === '' || category === '' || this.props.numBookmarks === 10}><span>Create</span></button>
 							</form>
 						</div>
                     )
                 }
             };
-
+			//###############################################
             
+			//############################### main app component
             class App extends Component {
                 constructor() {
                     super();
@@ -178,6 +245,10 @@
 					this.destroy = this.destroy.bind(this)
                 }
 
+				//this runs with default values
+				//default values are: 
+				//this.state.user: the user (called instantly and saved to localstorage to simulate logged in user)
+				//this.state.bookmarks: call the api to get the bookmarks of the logged in user
 				async componentDidMount() {
 					const { user, bookmarks } = this.state;
 					const myUser = await fetchUser();
@@ -185,7 +256,10 @@
 					this.setState({user: myUser, bookmarks: myBookmarks.data});
 				}
 
-				async create(bookmark) {
+				//create method. called from the form with parameters: category, url
+				//calls POST on the API
+				//yes i did the history.push thing just to be a little extra ;)
+				async create(bookmark, history) {
 					const randomNumber = Math.floor(Math.random() * 5);
 					const newPost = (await axios.post(`${API}/users/${this.state.user.id}/bookmarks`, {
 						category: bookmark.category,
@@ -194,44 +268,35 @@
 					})).data;
 					const newBookmark = [...this.state.bookmarks, newPost];
           			this.setState({ bookmarks: newBookmark });
+					history.push(`/${newPost.category}`);
+					if(this.state.bookmarks.length === 10) {
+						setTimeout( () => alert("You have reached the max number of bookmarks!"), 100);
+					}
 				}
 
-				async destroy(bookmark) {
-					await axios.delete(`${API}/users/${this.state.user.id}/bookmarks/${bookmark.id}`);
-					this.setState({bookmarks: this.state.bookmarks.filter( delThis => delThis.id !== bookmark.id)});
+				//could not figure out how to do the history thing here to work effectively
+				//called from the DELETE button from the bookmarks component with parameters:
+				//id of the bookmark. calls DELETE on the API
+				async destroy(bookmark, history) {
+					await axios.delete(`${API}/users/${this.state.user.id}/bookmarks/${bookmark}`);
+					this.setState({bookmarks: this.state.bookmarks.filter( delThis => delThis.id !== bookmark)});
 				}
 
+				//################################# App component render
                 render() {
                     const { user, bookmarks } = this.state;
 					const { create, destroy } = this;
-					// const newStuff = async() => {
-					// 	if(user.id) {
-					// 		const newns = await axios.post(`${API}/users/${user.id}/bookmarks`, {
-					// 			category: "social",
-					// 			url: "https://www.tumblr.com/",
-					// 			rating: 0
-					// 		})
-					// 	}
-					// };
-					// newStuff();
-					// console.log(bookmarks.data);
-					// const deleteBM = async() => {
-					// 	if(user.id) {
-					// 		bookmarks.forEach(bookmark => {
-					// 			axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`)
-					// 		})
-					// 	}
-					// };
-					// deleteBM();
-
                     return (
 						<HashRouter>
-							<h1>{user.fullName} ({bookmarks.length} bookmarks)</h1>
+							<h1>{user.fullName} ({bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'})</h1>
 							<Route path="/:filter?" render={(props) => (
-								<Nav {...props} bookmarks={bookmarks}/>
+								<div>
+									<Nav {...props} bookmarks={bookmarks} />
+									<Form numBookmarks={bookmarks.length} create={create} history={props.history} />
+								</div>
 								)}
+								
 							/>
-							<Form create={create}/>
 							<Switch>
 								<Route exact path="/:filter"
 									render={(props) => (
@@ -240,13 +305,12 @@
 												bookmarks={bookmarks}
 												destroy={destroy}
 												{...props}
+												history={props.history}
 											/>
 										</ul>
 									)}
 								/>
 							</Switch>
-							
-							
 						</HashRouter>
 					)
                 }
